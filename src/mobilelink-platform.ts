@@ -26,7 +26,7 @@ import { MobileLinkGeneratorStatus } from './types';
 export class MobileLinkPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
-  public mlapi: typeof Got;
+  public mlapi: typeof Got = Got;
 
   private isDiscovering = false;
 
@@ -44,7 +44,7 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
     } = config;
 
     if (!authToken) {
-      this.log.warn(`No auth token configured. For configuration instructions, visit https://github.com/drudge/homebridge-mobilelink.`);
+      this.log.warn('No auth token configured. For configuration instructions, visit https://github.com/drudge/homebridge-mobilelink.');
       return;
     }
 
