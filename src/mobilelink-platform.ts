@@ -38,6 +38,15 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
+    process.on('uncaughtException', (err) => {
+      this.log.error(err.stack || err.message);
+    });
+    
+    // We can't start without being configured.
+    if (!config) {
+      return;
+    }
+
     const {
       authToken,
       discoverFrequency = 60000,
