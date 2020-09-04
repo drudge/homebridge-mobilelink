@@ -41,7 +41,7 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
     process.on('uncaughtException', (err) => {
       this.log.error(err.stack || err.message);
     });
-    
+
     // We can't start without being configured.
     if (!config) {
       return;
@@ -109,7 +109,7 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
    */
   async discoverDevices() {
     if (this.isDiscovering) {
-      this.log.info('Discovery already in progress. Skipping.');
+      this.log.warn('Discovery already in progress. Skipping.');
       return;
     }
 
@@ -130,9 +130,10 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
 
       if (existingAccessory) {
         // the accessory already exists
-        this.log.info('Updating existing accessory:', existingAccessory.displayName);
+        this.log.debug('Updating existing accessory:', existingAccessory.displayName);
 
         existingAccessory.context.status = status;
+        
         this.api.updatePlatformAccessories([existingAccessory]);
       } else {
         // the accessory does not yet exist, so we need to create it
@@ -153,9 +154,6 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
-
-      // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
-      // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
     }
 
     this.isDiscovering = false;
