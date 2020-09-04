@@ -46,8 +46,8 @@ export class MobileLinkAccessory {
 
     // get the Outlet service if it exists, otherwise create a new Outlet service
     // you can create multiple services for each accessory
-    const getService = this.accessory.getService;
-    const addService = this.accessory.addService;
+    const getService = this.accessory.getService.bind(this.accessory);
+    const addService = this.accessory.addService.bind(this.accessory);
 
     this.service = getService(this.Service.Outlet) || addService(this.Service.Outlet);
     this.batteryService = getService(this.Service.BatteryService) || addService(this.Service.BatteryService);
