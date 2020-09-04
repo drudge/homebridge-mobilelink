@@ -43,6 +43,11 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
       discoverFrequency = 60000,
     } = config;
 
+    if (!authToken) {
+      this.log.warn(`No auth token configured. For configuration instructions, visit https://github.com/drudge/homebridge-mobilelink.`);
+      return;
+    }
+
     this.mlapi = Got.extend({
       prefixUrl: MOBILE_LINK_API_URL,
       responseType: 'json',

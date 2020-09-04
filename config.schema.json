@@ -1,4 +1,6 @@
 {
+  "headerDisplay": "For instructions on how to an auth token, visit the [GitHub repository](https://github.com/drudge/homebridge-mobilelink).",
+  "footerDisplay": "For help please visit the [GitHub repository](https://github.com/drudge/homebridge-mobilelink).",
   "pluginAlias": "MobileLink",
   "pluginType": "platform",
   "singular": true,
