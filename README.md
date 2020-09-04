@@ -10,7 +10,7 @@
 
 This is a Homebridge plugin that adds HomeKit support to Generac generators powered by the Mobile Link platform.
 
-** This project is not endorsed or sponsored by Generac Power Systems, Inc. and is for educational purposes only. **
+**This project is not endorsed or sponsored by Generac Power Systems, Inc. and is for educational purposes only.**
 
 This project should be use in conjunction with the [developer documentation](https://developers.homebridge.io/). A full list of all supported service types, and their characteristics is available on this site.
 
