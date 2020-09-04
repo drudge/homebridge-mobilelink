@@ -1,15 +1,20 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "MobileLink",
   "pluginType": "platform",
   "singular": true,
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "required": true,
-        "default": "Example Dynamic Platform"
+      "authToken": {
+          "title": "Auth Token",
+          "type": "string",
+          "required": true
+      },
+      "discoverFrequency": {
+          "title": "Discover Frequency (ms)",
+          "type": "number",
+          "required": true,
+          "default": 60000
       }
     }
   }
