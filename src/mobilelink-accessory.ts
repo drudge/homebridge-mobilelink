@@ -38,20 +38,15 @@ export class MobileLinkAccessory {
     this.log = this.platform.log;
 
     // set accessory information
-    this.accessory.getService(this.Service.AccessoryInformation)!
+    this.getService(this.Service.AccessoryInformation)!
       .setCharacteristic(this.Characteristic.Manufacturer, DEFAULT_MANUFACTURER_NAME)
       .setCharacteristic(this.Characteristic.Model, this.status.GeneratorModel)
       .setCharacteristic(this.Characteristic.SerialNumber, this.status.GeneratorSerialNumber)
       .setCharacteristic(this.Characteristic.FirmwareRevision, this.status.FirmwareVersion);
 
-    // get the Outlet service if it exists, otherwise create a new Outlet service
-    // you can create multiple services for each accessory
-    const getService = this.accessory.getService.bind(this.accessory);
-    const addService = this.accessory.addService.bind(this.accessory);
-
-    this.service = getService(this.Service.Outlet) || addService(this.Service.Outlet);
-    this.batteryService = getService(this.Service.BatteryService) || addService(this.Service.BatteryService);
-    this.bridgingStateService = getService(this.Service.BridgingState) || addService(this.Service.BridgingState);
+    this.service = this.getService(this.Service.Outlet);
+    this.batteryService = this.getService(this.Service.BatteryService);
+    this.bridgingStateService = this.getService(this.Service.BridgingState);
 
     // set the service name, this is what is displayed as the default name on the Home app
     this.service.setCharacteristic(this.Characteristic.Name, this.status.GeneratorName);
@@ -88,6 +83,22 @@ export class MobileLinkAccessory {
 
     this.bridgingStateService.getCharacteristic(this.Characteristic.Category)
       .on('get', this.handleCategoryGet.bind(this));
+  }
+
+  /**
+   * Returns the service if it exists, otherwise create a new Outlet service.
+   */
+  getService(service): Service {
+    return this.accessory.getService(service) || this.accessory.addService(service);
+  }
+
+  /**
+   * Returns a valid battery status based on the latest voltage reading.
+   */
+  getBatteryStatus(): CharacteristicValue {
+    return /good/i.test(this.status.BatteryVoltage)
+    ? this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL
+    : this.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
   }
 
   /**
@@ -170,7 +181,9 @@ export class MobileLinkAccessory {
       return callback(new Error(RED_LIGHT_ERROR_MESSAGE));
     }
 
-    callback(null, this.status.Connected ? 100 : 0);
+    const isBatteryStatusNormal = this.getBatteryStatus() === this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
+    
+    callback(null, isBatteryStatusNormal ? 100 : 0);
   }
 
   /**
@@ -197,12 +210,7 @@ export class MobileLinkAccessory {
   handleStatusLowBatteryGet(callback: CharacteristicGetCallback) {
     this.log.debug('Triggered GET StatusLowBattery');
 
-    // set this to a valid value for StatusLowBattery
-    const currentValue = /good/i.test(this.status.BatteryVoltage)
-      ? this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL
-      : this.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
-
-    callback(null, currentValue);
+    callback(null, this.getBatteryStatus());
   }
 
   /**

@@ -115,8 +115,15 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
 
     this.isDiscovering = true;
 
-    const getGeneratorStatuses = this.mlapi('Generator/GeneratorStatus');
-    const statuses: MobileLinkGeneratorStatus[] = await getGeneratorStatuses as unknown as MobileLinkGeneratorStatus[];
+    let statuses: MobileLinkGeneratorStatus[];
+    
+    try {
+      const getGeneratorStatuses = this.mlapi('Generator/GeneratorStatus');
+      statuses = await getGeneratorStatuses as unknown as MobileLinkGeneratorStatus[];
+    } catch (err) {
+      this.log.error(`Encountered error during discovery: ${err.stack || err.message}`);
+      statuses = [];
+    }
 
     // loop over the discovered generators and register each one if it has not already been registered
     for (const status of statuses) {
