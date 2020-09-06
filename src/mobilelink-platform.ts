@@ -33,6 +33,8 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
 
+  public readonly generators: Map<string, MobileLinkAccessory> = new Map<string, MobileLinkAccessory>();
+
   constructor(
     public readonly log: Logger,
     public readonly config: PlatformConfig,
@@ -100,7 +102,7 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
     this.accessories.push(accessory);
 
     // create the accessory handler for the restored accessory
-    new MobileLinkAccessory(this, accessory);
+    this.generators.set(accessory.UUID, new MobileLinkAccessory(this, accessory));
   }
 
   /**
@@ -133,15 +135,16 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
 
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
+      // const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
+      const generator = this.generators.get(uuid);
 
-      if (existingAccessory) {
+      if (generator) {
         // the accessory already exists
-        this.log.debug('Updating existing accessory:', existingAccessory.displayName);
+        this.log.debug('Updating existing accessory:', generator.accessory.displayName);
 
-        existingAccessory.context.status = status;
+        generator.updateStatus(status);
         
-        this.api.updatePlatformAccessories([existingAccessory]);
+        this.api.updatePlatformAccessories([generator.accessory]);
       } else {
         // the accessory does not yet exist, so we need to create it
         this.log.info('Adding new accessory:', status.GeneratorName);
@@ -156,7 +159,7 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
         this.accessories.push(accessory);
 
         // create the accessory handler for the newly create accessory
-        new MobileLinkAccessory(this, accessory);
+        this.generators.set(accessory.UUID, new MobileLinkAccessory(this, accessory));
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
