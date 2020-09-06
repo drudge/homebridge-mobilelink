@@ -102,20 +102,12 @@ export class MobileLinkAccessory {
   }
 
   getBatteryLevel() {
-    if (this.hasServiceFault()) {
-      throw new Error(RED_LIGHT_ERROR_MESSAGE);
-    }
-
     const isBatteryStatusNormal = this.getBatteryStatus() === this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
 
     return isBatteryStatusNormal ? 100 : 0;
   }
 
   getChargingState() {
-    if (this.hasServiceFault()) {
-      throw new Error(RED_LIGHT_ERROR_MESSAGE);
-    }
-
     return this.status.Connected
       ? this.Characteristic.ChargingState.CHARGING
       : this.Characteristic.ChargingState.NOT_CHARGING;
@@ -127,10 +119,6 @@ export class MobileLinkAccessory {
    * The blue light being lit means the generator is currently running.
    */
   isRunning(): boolean {
-    if (this.hasServiceFault()) {
-      throw new Error(RED_LIGHT_ERROR_MESSAGE);
-    }
-
     return this.status.BlueLightLit;
   }
 
@@ -168,7 +156,7 @@ export class MobileLinkAccessory {
           .getCharacteristic(this.Characteristic.FirmwareRevision)
           .updateValue(this.status.FirmwareVersion);
 
-        this.service.getCharacteristic(this.Characteristic.On).updateValue(this.isOn());
+        this.service.getCharacteristic(this.Characteristic.On).updateValue(this.isReady());
         this.service.getCharacteristic(this.Characteristic.OutletInUse).updateValue(this.isRunning());
 
         this.batteryService.getCharacteristic(this.Characteristic.BatteryLevel).updateValue(this.getBatteryLevel());
