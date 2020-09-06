@@ -25,7 +25,7 @@ export interface MobileLinkGeneratorStatus {
     FuelLevel: number;
     GeneratorBrandImageURL: string;
     GeneratorServiceStatus: boolean;
-    Accessories: any[],
+    Accessories: Record<string, unknown>[],
     SignalStrength: string;
     DeviceId: string;
     DeviceTypeId: number;

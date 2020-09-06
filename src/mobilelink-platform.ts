@@ -140,11 +140,11 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
 
       if (generator) {
         // the accessory already exists
-        this.log.debug('Updating existing accessory:', generator.accessory.displayName);
+        this.log.debug('Updating existing accessory:', generator.displayName());
 
         generator.updateStatus(status);
         
-        this.api.updatePlatformAccessories([generator.accessory]);
+        this.api.updatePlatformAccessories([generator.getPlatformAccessory()]);
       } else {
         // the accessory does not yet exist, so we need to create it
         this.log.info('Adding new accessory:', status.GeneratorName);
