@@ -6,7 +6,7 @@
 </p>
 
 
-# Mobile Link Platform Plugin
+# Mobile Link Platform Plugin [![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 
 This is a Homebridge plugin that adds HomeKit support to Generac generators powered by the Mobile Link platform.
 
