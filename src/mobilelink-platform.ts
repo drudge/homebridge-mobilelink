@@ -7,16 +7,14 @@ import {
   PlatformConfig, 
   Service, 
 } from 'homebridge';
-import Got from 'got';
+import * as mobilelinkApi from 'mobilelink-api';
 
 import { MobileLinkAccessory } from './mobilelink-accessory';
 import { 
-  MOBILE_LINK_API_URL,
-  MOBILE_LINK_API_USER_AGENT,
   PLATFORM_NAME,
   PLUGIN_NAME,
 } from './settings';
-import { MobileLinkGeneratorStatus } from './types';
+import { MobileLinkApparatus } from './types';
 
 /**
  * MobileLinkPlatform
@@ -26,7 +24,6 @@ import { MobileLinkGeneratorStatus } from './types';
 export class MobileLinkPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
-  public mlapi: typeof Got = Got;
 
   private isDiscovering = false;
 
@@ -50,27 +47,15 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
     }
 
     const {
-      authToken,
       discoverFrequency = 60000,
+      username,
+      password,
     } = config;
 
-    if (!authToken) {
-      this.log.warn('No auth token configured. For configuration instructions, visit https://github.com/drudge/homebridge-mobilelink.');
+    if (!username || !password) {
+      this.log.warn('No user/password configured. For configuration instructions, visit https://github.com/drudge/homebridge-mobilelink.');
       return;
     }
-
-    this.mlapi = Got.extend({
-      prefixUrl: MOBILE_LINK_API_URL,
-      responseType: 'json',
-      resolveBodyOnly: true,
-      decompress: true,
-      headers: {
-        'User-Agent': `${MOBILE_LINK_API_USER_AGENT} (iPhone; iOS 14.0; Scale/3.00)`,
-        'Connection': 'keep-alive',
-        'Accept-Language': 'en-US;q=1',
-        'AuthToken': authToken,
-      },
-    });
 
     this.log.debug('Finished initializing platform:', this.config.name || PLATFORM_NAME);
 
@@ -117,21 +102,23 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
 
     this.isDiscovering = true;
 
-    let statuses: MobileLinkGeneratorStatus[];
+    let statuses: MobileLinkApparatus[];
     
     try {
-      const getGeneratorStatuses = this.mlapi('Generator/GeneratorStatus');
-      statuses = await getGeneratorStatuses as unknown as MobileLinkGeneratorStatus[];
+      await mobilelinkApi.login(this.config);
+      this.log.debug('Logged in to MobileLink API.');
+      statuses = await mobilelinkApi.getGenerators() as unknown as MobileLinkApparatus[];
+      this.log.debug(`Discovered ${statuses.length} generators using the MobileLink API.`);
     } catch (err) {
-      this.log.error(`Encountered error during discovery: ${err.stack || err.message}`);
+      this.log.error(`Encountered error during discovery: ${(err as Error).stack || (err as Error).message}`);
       statuses = [];
     }
 
     // loop over the discovered generators and register each one if it has not already been registered
-    for (const status of statuses) {
-      const uuid = this.api.hap.uuid.generate(status.DeviceId);
+    for (const apparatus of statuses) {
+      const uuid = this.api.hap.uuid.generate(String(apparatus.apparatusId));
 
-      this.log.debug('UUID: %s - Generator Status: %j', uuid, status);
+      this.log.debug('UUID: %s - Generator Status: %j', uuid, apparatus);
 
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
@@ -142,19 +129,19 @@ export class MobileLinkPlatform implements DynamicPlatformPlugin {
         // the accessory already exists
         this.log.debug('Updating existing accessory:', generator.displayName());
 
-        generator.updateStatus(status);
+        generator.updateStatus(apparatus);
         
         this.api.updatePlatformAccessories([generator.getPlatformAccessory()]);
       } else {
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', status.GeneratorName);
+        this.log.info('Adding new accessory:', apparatus.name);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(status.GeneratorName, uuid);
+        const accessory = new this.api.platformAccessory(apparatus.name, uuid);
 
         // store a copy of the status object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.status = status;
+        accessory.context.status = apparatus;
 
         this.accessories.push(accessory);
 
