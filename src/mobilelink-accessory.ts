@@ -176,7 +176,7 @@ export class MobileLinkAccessory {
 
       try {
         this.service.getCharacteristic(this.Characteristic.Name).updateValue(this.apparatus.name);
-        this.service.getCharacteristic(this.Characteristic.On).updateValue(this.isReady());
+        this.service.getCharacteristic(this.Characteristic.On).updateValue(this.isRunning());
         this.service.getCharacteristic(this.Characteristic.OutletInUse).updateValue(this.isRunning());
 
         this.batteryService.getCharacteristic(this.Characteristic.BatteryLevel).updateValue(this.getBatteryLevel());
