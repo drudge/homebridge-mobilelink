@@ -1,5 +1,4 @@
 {
-  "headerDisplay": "For instructions on how to an auth token, visit the [GitHub repository](https://github.com/drudge/homebridge-mobilelink).",
   "footerDisplay": "For help please visit the [GitHub repository](https://github.com/drudge/homebridge-mobilelink).",
   "pluginAlias": "MobileLink",
   "pluginType": "platform",
@@ -7,10 +6,15 @@
   "schema": {
     "type": "object",
     "properties": {
-      "authToken": {
-          "title": "Auth Token",
-          "type": "string",
-          "required": true
+      "username": {
+        "title": "Username",
+        "type": "string",
+        "required": true
+      },
+      "password": {
+        "title": "Password",
+        "type": "string",
+        "required": true
       },
       "discoverFrequency": {
           "title": "Discover Frequency (ms)",

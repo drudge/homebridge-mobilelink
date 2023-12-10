@@ -8,7 +8,7 @@ import {
 
 import { MobileLinkPlatform } from './mobilelink-platform';
 import { DEFAULT_MANUFACTURER_NAME } from './settings';
-import { MobileLinkGeneratorStatus } from './types';
+import { MobileLinkApparatus } from './types';
 
 const RED_LIGHT_ERROR_MESSAGE = 'Your generator has either experienced a fault or has been switched to OFF.';
 
@@ -26,7 +26,7 @@ export class MobileLinkAccessory {
   private bridgingStateService: Service;
   private infoService: Service;
 
-  private status: MobileLinkGeneratorStatus;
+  private apparatus: MobileLinkApparatus;
   private readonly log: Logger;
 
   constructor(
@@ -34,14 +34,14 @@ export class MobileLinkAccessory {
     private readonly accessory: PlatformAccessory,
   ) {
     this.log = this.platform.log;
-    this.status = this.accessory.context.status;
+    this.apparatus = this.accessory.context.status;
 
     this.service = this.getService(this.Service.Outlet);
     this.infoService = this.getService(this.Service.AccessoryInformation);
     this.batteryService = this.getService(this.Service.BatteryService);
     this.bridgingStateService = this.getService(this.Service.BridgingState);
 
-    this.updateStatus(this.status, true);
+    this.updateStatus(this.apparatus, true);
   }
 
   /**
@@ -69,9 +69,7 @@ export class MobileLinkAccessory {
    * Returns a valid battery status based on the latest voltage reading.
    */
   getBatteryStatus(): CharacteristicValue {
-    return /good/i.test(this.status.BatteryVoltage)
-      ? this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL
-      : this.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
+    return this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
   }
 
   /**
@@ -79,7 +77,6 @@ export class MobileLinkAccessory {
    */
   getBatteryLevel() {
     const isBatteryStatusNormal = this.getBatteryStatus() === this.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
-
     return isBatteryStatusNormal ? 100 : 0;
   }
 
@@ -87,7 +84,7 @@ export class MobileLinkAccessory {
    * Returns a valid charging state based on a generator being connected.
    */
   getChargingState() {
-    return this.status.Connected
+    return this.apparatus.isConnected
       ? this.Characteristic.ChargingState.CHARGING
       : this.Characteristic.ChargingState.NOT_CHARGING;
   }
@@ -98,7 +95,7 @@ export class MobileLinkAccessory {
    * The blue light being lit means the generator is currently running.
    */
   isRunning(): boolean {
-    return this.status.BlueLightLit;
+    return ['Running', 'Exercising'].includes(this.getStatusText());
   }
 
   /**
@@ -107,7 +104,7 @@ export class MobileLinkAccessory {
    * This means the generator has either experienced a fault or has been switched to OFF.
    */
   hasServiceFault(): boolean {
-    return this.status.RedLightLit;
+    return ['Communication Issue', 'Unknown'].includes(this.getStatusText());
   }
 
   /**
@@ -116,7 +113,7 @@ export class MobileLinkAccessory {
    * The yellow light being lit means generator needs maintenance or has a warning, but will still run in the event of an outage.
    */
   isReady(): boolean {
-    return this.status.GreenLightLit || this.status.YellowLightLit;
+    return ['Ready', 'Warning'].includes(this.getStatusText());
   }
 
   /**
@@ -137,44 +134,64 @@ export class MobileLinkAccessory {
    * Returns a value between 1 and 4 to indicate signal strength of the WiFi connection.
    */
   getLinkQuality() {
-    const linkQuality = Math.ceil((Math.abs(Number(this.status.SignalStrength)) / 100) * 4);
+    const deviceProps = this.apparatus.properties?.find(prop => prop.name === 'Device');
 
-    return Math.min(linkQuality, 4);
+    if (deviceProps) {
+      const linkQuality = Number((deviceProps.value?.signalStrength || '').replace('%', ''));
+
+      return Math.ceil((Math.abs(linkQuality) / 100) * 4);
+    }
+    return Math.min(1, 4);
+  }
+
+  getStatusText() {
+    const options: string[] = [
+      'Ready',
+      'Running',
+      'Exercising',
+      'Warning',
+      'Stopped',
+      'Communication Issue',
+      'Unknown',
+    ];
+    let index = this.apparatus.apparatusStatus - 1;
+    if (index < 0 || index > options.length - 1) {
+      index = options.length - 1;
+    }
+    return options[index];
   }
 
   /**
    * Detect status changes and update service characteristics.
    */
-  updateStatus(newStatus: MobileLinkGeneratorStatus, force = false) {
-    const hasChanged = !this.status || ((this.status.Connected !== newStatus.Connected) || 
-      (this.status.FirmwareVersion !== newStatus.FirmwareVersion) || (this.status.BlueLightLit !== newStatus.BlueLightLit) || 
-      (this.status.GreenLightLit !== newStatus.GreenLightLit) || (this.status.RedLightLit !== newStatus.RedLightLit) || 
-      (this.status.YellowLightLit !== newStatus.YellowLightLit) || (this.status.SignalStrength !== newStatus.SignalStrength) || 
-      (this.status.BatteryVoltage !== newStatus.BatteryVoltage));
+  updateStatus(updatedApparatus: MobileLinkApparatus, force = false) {
+    const hasChanged = !this.apparatus || ((this.apparatus.isConnected !== updatedApparatus.isConnected) || 
+      (this.apparatus.name !== updatedApparatus.name) || (this.apparatus.serialNumber !== updatedApparatus.serialNumber));
 
-    this.status = newStatus;
-    this.accessory.context.status = newStatus;
+    this.apparatus = updatedApparatus;
+    this.accessory.context.status = updatedApparatus;
 
     if (hasChanged || force) {
-      !force && this.log.info('%s: Detected status change, updating characteristics', this.status.GeneratorName);
+      !force && this.log.info('%s: Detected status change, updating characteristics', this.apparatus.name);
 
       try {
-        this.service.getCharacteristic(this.Characteristic.Name).updateValue(this.status.GeneratorName);
-        this.service.getCharacteristic(this.Characteristic.On).updateValue(this.isReady());
+        this.service.getCharacteristic(this.Characteristic.Name).updateValue(this.apparatus.name);
+        this.service.getCharacteristic(this.Characteristic.On).updateValue(this.isRunning());
         this.service.getCharacteristic(this.Characteristic.OutletInUse).updateValue(this.isRunning());
 
         this.batteryService.getCharacteristic(this.Characteristic.BatteryLevel).updateValue(this.getBatteryLevel());
         this.batteryService.getCharacteristic(this.Characteristic.ChargingState).updateValue(this.getChargingState());
         this.batteryService.getCharacteristic(this.Characteristic.StatusLowBattery).updateValue(this.getBatteryStatus());
 
-        this.bridgingStateService.getCharacteristic(this.Characteristic.Reachable).updateValue(this.status.Connected);
+        this.bridgingStateService.getCharacteristic(this.Characteristic.Reachable).updateValue(this.apparatus.isConnected);
         this.bridgingStateService.getCharacteristic(this.Characteristic.LinkQuality).updateValue(this.getLinkQuality());
         
         this.infoService.getCharacteristic(this.Characteristic.Manufacturer).updateValue(DEFAULT_MANUFACTURER_NAME);
-        this.infoService.getCharacteristic(this.Characteristic.Model).updateValue(this.status.GeneratorModel);
-        this.infoService.getCharacteristic(this.Characteristic.FirmwareRevision).updateValue(this.status.FirmwareVersion);
+        this.infoService.getCharacteristic(this.Characteristic.Model).updateValue(this.apparatus.modelNumber);
+        this.infoService.getCharacteristic(this.Characteristic.SerialNumber).updateValue(this.apparatus.serialNumber);
+        // this.infoService.getCharacteristic(this.Characteristic.FirmwareRevision).updateValue(this.apparatus.FirmwareVersion);
       } catch (err) {
-        this.log.error('Could not update status: %s', err.stack || err.message);
+        this.log.error('Could not update status: %s', (err as Error).stack || (err as Error).message);
       }
     }
   }
